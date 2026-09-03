@@ -1,0 +1,11 @@
+
+from django.urls import path
+from .views import ExpenseView,UserRegistrationView,LoginView
+
+urlpatterns = [
+    path('expenses/',ExpenseView.as_view(),name='expenses'),
+    path('expenses/<int:id>/', ExpenseView.as_view(), name='expense-detail'),
+    path('users/', UserRegistrationView.as_view(), name='user-registration'),
+    path('login/', LoginView.as_view(), name='login'),
+
+]

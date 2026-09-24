@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Expense
+from .models import Expense,Category
 
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
@@ -10,7 +10,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
     class Meta:
         model= Expense
         fields= (
-            'amount','description'
+            'amount','description','category'
         )
 
     
@@ -52,3 +52,10 @@ class LoginSerializer(serializers.Serializer):
         data['user']= user
 
         return data
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model= Category
+        fields= ('id','name')

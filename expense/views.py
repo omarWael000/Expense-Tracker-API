@@ -6,8 +6,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
-from .serializers import ExpenseSerializer, UserSerializer,LoginSerializer
-from .models import Expense
+from .serializers import ExpenseSerializer, UserSerializer,LoginSerializer,CategorySerializer
+from .models import Expense,Category
 
 
 
@@ -36,6 +36,9 @@ class ExpenseView(APIView):
         serializer = ExpenseSerializer(data=request.data)
 
         if serializer.is_valid():
+
+            category= get_object_or_404(Category,id=request.data['category'],user=request.user)
+
             serializer.save(user=request.user)
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -47,10 +50,11 @@ class ExpenseView(APIView):
 
         expense = get_object_or_404(Expense,id=id,user=request.user)
                 
-
         serializer = ExpenseSerializer(expense,data=request.data)
 
         if serializer.is_valid():
+
+            category= get_object_or_404(Category,id=request.data['category'],user=request.user)
             serializer.save()
             return Response(serializer.data)
 
@@ -64,7 +68,12 @@ class ExpenseView(APIView):
         serializer = ExpenseSerializer(expense,data=request.data,partial=True)
 
         if serializer.is_valid():
+
+            if 'category' in request.data:
+                category= get_object_or_404(Category,id=request.data['category'],user=request.user)
+
             serializer.save()
+
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -74,6 +83,72 @@ class ExpenseView(APIView):
 
         expense = get_object_or_404(Expense,id=id,user=request.user)
         expense.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+class CategoryView(APIView):
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request,id=None):
+
+        if id is None:
+
+            categories= Category.objects.filter(user=request.user)
+            serializer= CategorySerializer(categories,many=True)
+            return Response(serializer.data)
+            
+            
+
+        category= get_object_or_404(Category,id=id,user=request.user)
+        serializer=CategorySerializer(category)
+
+        return Response(serializer.data)
+
+    def post(self,request):
+
+        serializer= CategorySerializer(data=request.data)
+
+        if serializer.is_valid():
+
+            serializer.save(user=request.user)
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def put(self,request,id):
+
+        category=get_object_or_404(Category,id=id,user=request.user)
+
+        serializer= CategorySerializer(category,data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response (serializer.errors)
+        
+
+    def patch(self,request,id):
+
+        category=get_object_or_404(Category,id=id,user=request.user)
+        
+        serializer= CategorySerializer(category,data=request.data,partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        
+        return Response (serializer.errors)
+
+
+    def delete(self,request,id):
+        category=get_object_or_404(Category,id=id,user=request.user)
+
+        category.delete()
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 

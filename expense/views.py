@@ -1,10 +1,13 @@
 from django.shortcuts import render,get_object_or_404
 
+from datetime import datetime
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
+from rest_framework.pagination import PageNumberPagination
 
 from .serializers import ExpenseSerializer, UserSerializer,LoginSerializer,CategorySerializer
 from .models import Expense,Category
@@ -20,8 +23,77 @@ class ExpenseView(APIView):
     def get(self,request,id=None):
 
         if id is None:
-            qs= Expense.objects.filter(user=request.user)
-            serializer = ExpenseSerializer(qs, many=True)
+            expenses= Expense.objects.filter(user=request.user)
+
+            category_id = request.query_params.get('category')
+            start_date = request.query_params.get('start_date')
+            end_date = request.query_params.get('end_date')
+            min_amount= request.query_params.get('min_amount')
+            max_amount= request.query_params.get('max_amount')
+            ordering = request.query_params.get('ordering')
+
+
+            if category_id:
+
+                try:
+                    int(category_id)
+                except ValueError:
+                    return Response({"error": "Category must be an integer"},status=status.HTTP_400_BAD_REQUEST)
+
+                expenses= expenses.filter(category=category_id)
+
+            if start_date:
+                try:
+                    datetime.strptime(start_date,'%Y-%m-%d')
+                except ValueError:
+                    return Response({"error": "start_date must be in YYYY-MM-DD format."},status=status.HTTP_400_BAD_REQUEST)
+                
+                expenses = expenses.filter(created_at__date__gte=start_date)
+
+            if end_date:
+                try:
+                    datetime.strptime(end_date,'%Y-%m-%d')
+                except ValueError:
+                    return Response({"error": "end_date must be in YYYY-MM-DD format."},status=status.HTTP_400_BAD_REQUEST)
+
+                expenses = expenses.filter(created_at__date__lte=end_date)
+
+            if min_amount:
+
+                try:
+                    float(min_amount)
+                except ValueError:
+                    return Response({"error": "min_amount must be a number"},status=status.HTTP_400_BAD_REQUEST)
+
+                expenses = expenses.filter(amount__gte=min_amount)
+
+            if max_amount:
+
+                try:
+                    float(max_amount)
+                except ValueError:
+                    return Response({"error": "max_amount must be a number"},status=status.HTTP_400_BAD_REQUEST)
+                
+                expenses = expenses.filter(amount__lte=max_amount)
+
+            if ordering:
+                allowed_fields = ['amount', 'created_at']
+
+                if ordering.lstrip('-') not in allowed_fields:
+                    return Response(
+                        {"error": "Invalid ordering field."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                expenses = expenses.order_by(ordering)
+
+            paginator = PageNumberPagination()
+            paginator.page_size = 2
+            page = paginator.paginate_queryset(expenses, request)
+
+            serializer = ExpenseSerializer(page, many=True)
+
+            return paginator.get_paginated_response(serializer.data)
 
             return Response(serializer.data)
 

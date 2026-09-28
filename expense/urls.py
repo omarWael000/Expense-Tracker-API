@@ -1,6 +1,6 @@
 
 from django.urls import path
-from .views import ExpenseView,UserRegistrationView,LoginView,CategoryView
+from .views import ExpenseView,UserRegistrationView,LoginView,CategoryView,StatisticsView
 
 urlpatterns = [
     path('expenses/',ExpenseView.as_view(),name='expenses'),
@@ -9,6 +9,7 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='login'),
     path('categories/',CategoryView.as_view(), name='categories'),
     path('categories/<int:id>/', CategoryView.as_view(), name='category-detail'),
+    path('statistics/',StatisticsView.as_view(),name='statistics'),
 
 
 ]

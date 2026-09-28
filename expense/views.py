@@ -1,5 +1,8 @@
 from django.shortcuts import render,get_object_or_404
 
+from django.db.models import Sum, Count,F,Avg
+from django.db.models.functions import TruncMonth
+
 from datetime import datetime
 
 from rest_framework.views import APIView
@@ -94,8 +97,6 @@ class ExpenseView(APIView):
             serializer = ExpenseSerializer(page, many=True)
 
             return paginator.get_paginated_response(serializer.data)
-
-            return Response(serializer.data)
 
         expense = get_object_or_404(Expense,id=id,user=request.user)
         
@@ -224,6 +225,61 @@ class CategoryView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+
+class StatisticsView(APIView):
+    
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+
+        expenses=Expense.objects.filter(user=request.user)
+
+        total_expenses = expenses.count()
+        total_amount = expenses.aggregate(total=Sum('amount'))['total']
+        average_expense= expenses.aggregate(average=Avg('amount'))['average']
+
+        if total_amount is None:
+            total_amount = 0
+
+        if average_expense is None:
+            average_expense=0
+
+
+        category_stats = (expenses.values(category_name=F('category__name')).annotate(total=Sum('amount')).order_by('-total'))
+        monthly_stats=(expenses.annotate(month=TruncMonth('created_at')).values('month').annotate(total=Sum('amount')).order_by('month'))
+
+
+        category_stats = [
+            {
+                'category_name': item['category_name'],
+                'total': item['total'],
+                'percentage': (
+                    (item['total'] / total_amount) * 100
+                    if total_amount else 0
+                )
+            }
+            for item in category_stats
+        ]
+
+        monthly_stats = [
+            {
+                'month': item['month'].strftime('%Y-%m'),
+                'total': item['total']
+            }
+            for item in monthly_stats
+        ]
+
+        return Response({
+            'total_expenses': total_expenses,
+            'total_amount': total_amount,
+            'average_expense':average_expense,
+            'by_category': category_stats,
+            'monthly': monthly_stats
+        })
+
+
+
+
    
 
 class UserRegistrationView(APIView):
@@ -244,6 +300,7 @@ class UserRegistrationView(APIView):
             serializer.errors,
             status=status.HTTP_400_BAD_REQUEST
         )
+
 
 
 class LoginView(APIView):
